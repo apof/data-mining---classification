@@ -16,6 +16,8 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn import metrics
+from sklearn.metrics.pairwise import cosine_similarity
+from numpy import linalg as LA
 import math
 from operator import itemgetter
 import numpy as np
@@ -48,6 +50,7 @@ def KNN_CrossValidation(folds, data):
 	precision = 0
 	recall = 0
 	fmeasure = 0
+	count = 1
 	for train_indices, test_indices in k_fold.split(data['Category']):
 		#text_clf.fit(data['Content'][train_indices], data['Category'][train_indices])
 
@@ -57,6 +60,9 @@ def KNN_CrossValidation(folds, data):
 		#precision += metrics.precision_score(data['Category'][test_indices], predicted, average='macro')
 		#recall += metrics.recall_score(data['Category'][test_indices], predicted, average='macro')
 		#fmeasure += metrics.f1_score(data['Category'][test_indices], predicted, average='macro')
+
+		print str(count) + "st fold completed"
+		count += 1
 
 	print "Precision = " + str(precision/10)
 	print "Accuracy = " + str(accuracy/10)
@@ -72,30 +78,21 @@ def KNN(train_data, target, predict_data):
 	normalizer = Normalizer(copy=False)
 	lsa = make_pipeline(svd, normalizer)
 	X = lsa.fit_transform(X)
-	#print X.shape
-	#print X
-	#print "\n\n\n"
-	#transformer = TfidfTransformer(use_idf=False).fit(X)
-	#X = transformer.fit_transform(X)
-	#print X.shape
-	#print X
-	#print target
+	
 	vectorizer = TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)
 	X_predict = vectorizer.fit_transform(predict_data)
-	#transformer = TfidfTransformer(use_idf=False).fit(X_predict)
-	#X_predict = transformer.fit_transform(X_predict)
 	svd = TruncatedSVD(algorithm='randomized', n_components=n_comp, n_iter=7, random_state=42, tol=0.0)
 	normalizer = Normalizer(copy=False)
 	lsa = make_pipeline(svd, normalizer)
 	X_predict = lsa.fit_transform(X_predict)
 
-	print X_predict
+	#print X_predict
 
 	out = []
 	#for i in range(X_predict.shape[0]):
 		#distances = calculate_distances(X_predict[i], X, target)
 	for i in range(len(X_predict)):
-		distances = calculate_distances(X_predict[i], X, target)	
+		distances = calculate_distances(X_predict[i], X, target)
 		hashmap = {}
 		hashmap['Politics'] = 0
 		hashmap['Film'] = 0
@@ -111,44 +108,63 @@ def KNN(train_data, target, predict_data):
 
 
 def calculate_distances(X_predict, X, target):
-	#X = X.toarray();
-	#X_predict = X_predict.toarray();
+
 	target = target.values;
-	# print X
-	# print X_predict
+	
+	####################
+	#Eycleidian Distance
+	####################
+	# distances = []
+	# for i in range(len(X)):
+	# 	distance = 0
+	# 	for j in range(len(X[i])):
+	# 		if(j >= len(X_predict)):
+	# 			distance += X[i][j]*X[i][j]
+	# 		else:
+	# 			distance += (X_predict[j]-X[i][j])*(X_predict[j]-X[i][j])
+	# 	if(len(X_predict) > len(X[i])):
+	# 		for j in range(len(X[i]),len(X_predict)):
+	# 			distance += X_predict[j]*X_predict[j]
+	# 	distances.append((math.sqrt(distance), target[i]))
+	# sorted_distances = sorted(distances,key=itemgetter(0))
+
+	##################
+	#Cosine Similarity
+	##################
+	norm_b = LA.norm(X_predict)
 	distances = []
 	for i in range(len(X)):
+		norm_a = LA.norm(X[i])
 		distance = 0
 		for j in range(len(X[i])):
 			if(j >= len(X_predict)):
-				distance += X[i][j]*X[i][j]
+				distance += 0
 			else:
-				distance += (X_predict[j]-X[i][j])*(X_predict[j]-X[i][j])
-		if(len(X_predict) > len(X[i])):
-			for j in range(len(X[i]),len(X_predict)):
-				distance += X_predict[j]*X_predict[j]
-		distances.append((math.sqrt(distance), target[i]))
+				distance += X_predict[j]*X[i][j]
+		distances.append((distance/(norm_a*norm_b), target[i]))
 	sorted_distances = sorted(distances,key=itemgetter(0),reverse=True)
+
+	
 	return sorted_distances
 		
 
 def main():
-	print "Main"
 	data = pd.read_csv('./datasets/train_set.csv', sep="\t")
 	folds = 10
-	#data = data[0:1000]
+	data = data[0:10000]
 
 	svd_model = TruncatedSVD(n_components=500, algorithm='randomized',n_iter=10, random_state=42)
 
-	#pred = KNN(data['Content'], data['Category'], data['Content'])
-	#print pred
+	#add_stop_words = ["say","said","will","one"]
+	#enhanced_stop_words = ENGLISH_STOP_WORDS.union(add_stop_words)
+
 
 	#KNN
-	#KNN_CrossValidation(folds, data)
+	KNN_CrossValidation(folds, data)
 
 	#Random Forest
  	text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', RandomForestClassifier())])
- 	KfoldCrossValidation(text_clf, folds, data)
+ 	#KfoldCrossValidation(text_clf, folds, data)
 
  	#SVM
  	text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', svm.SVC(C=1.0, kernel='linear',gamma='auto'))])
@@ -160,6 +176,7 @@ def main():
 
  	#Stochastic Gradient Descent
  	#text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=2000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', SGDClassifier(loss='hinge', penalty='l2',alpha=1e-3, random_state=42,max_iter=5, tol=None))])
+ 	#KfoldCrossValidation(text_clf, folds, data)
 
  	#Stochastic Gradient Descent
  	#text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(10, 5), random_state=1))])

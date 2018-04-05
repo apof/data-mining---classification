@@ -1,0 +1,11 @@
+YPOXREWTIKA:
+1)Εισαγωγη τιτλου (με μιξη πολλων classifier)
+2)KNN:
+	-Υπολογισμός μετρικών
+
+3)SVM: Επιλογη παραμετρων
+4)Πειραματισμο για Components σε εναν Classifier
+
+Βελτιστοποιησεις:
+1)Πειραματισμο με STOP WORDS
+2)Μίξη πολλων classifier για να κανουμε predict το test set
