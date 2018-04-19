@@ -15,6 +15,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import GridSearchCV
 from sklearn import metrics
 from sklearn.metrics.pairwise import cosine_similarity
 from numpy import linalg as LA
@@ -29,6 +30,7 @@ def KfoldCrossValidation(text_clf, folds, data):
 	precision = 0
 	recall = 0
 	fmeasure = 0
+	count = 1
 	for train_indices, test_indices in k_fold.split(data['Category']):
 		text_clf.fit(data['Content'][train_indices], data['Category'][train_indices])
 
@@ -38,6 +40,9 @@ def KfoldCrossValidation(text_clf, folds, data):
 		#precision += metrics.precision_score(data['Category'][test_indices], predicted, average='macro')
 		#recall += metrics.recall_score(data['Category'][test_indices], predicted, average='macro')
 		#fmeasure += metrics.f1_score(data['Category'][test_indices], predicted, average='macro')
+
+		print str(count) + "st fold completed"
+		count += 1
 
 	print "Precision = " + str(precision/10)
 	print "Accuracy = " + str(accuracy/10)
@@ -57,9 +62,9 @@ def KNN_CrossValidation(folds, data):
 		predicted = KNN(data['Content'][train_indices], data['Category'][train_indices], data['Content'][test_indices])
 		predicted = np.asarray(predicted)
 		accuracy += metrics.accuracy_score(data['Category'][test_indices], predicted) 
-		#precision += metrics.precision_score(data['Category'][test_indices], predicted, average='macro')
-		#recall += metrics.recall_score(data['Category'][test_indices], predicted, average='macro')
-		#fmeasure += metrics.f1_score(data['Category'][test_indices], predicted, average='macro')
+		precision += metrics.precision_score(data['Category'][test_indices], predicted, average='macro')
+		recall += metrics.recall_score(data['Category'][test_indices], predicted, average='macro')
+		fmeasure += metrics.f1_score(data['Category'][test_indices], predicted, average='macro')
 
 		print str(count) + "st fold completed"
 		count += 1
@@ -147,11 +152,20 @@ def calculate_distances(X_predict, X, target):
 	
 	return sorted_distances
 		
+def append_title_to_content(data, times_to_append_title):
+	for i in range(len(data['Title'])):
+		strr=""
+		for j in range(times_to_append_title):
+			#data['Content'][i] += data['Title'][i];
+			strr += data['Title'][i];
+		data['Content'][i] += strr
+	print "Title preprocessing is done"
 
 def main():
 	data = pd.read_csv('./datasets/train_set.csv', sep="\t")
 	folds = 10
-	data = data[0:10000]
+	data = data[0:1000]
+	append_title_to_content(data,20)
 
 	svd_model = TruncatedSVD(n_components=500, algorithm='randomized',n_iter=10, random_state=42)
 
@@ -160,14 +174,25 @@ def main():
 
 
 	#KNN
-	KNN_CrossValidation(folds, data)
+	#KNN_CrossValidation(folds, data)
 
 	#Random Forest
  	text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', RandomForestClassifier())])
  	#KfoldCrossValidation(text_clf, folds, data)
 
- 	#SVM
- 	text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', svm.SVC(C=1.0, kernel='linear',gamma='auto'))])
+ 	#SVM-Grid Search
+ 	#params = {'clf__C': [1, 10, 100, 1000], 'clf__gamma': [0.001, 0.0001], 'clf__kernel': ['linear', 'rbf']}
+ 	#text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', svm.SVC())])
+ 	#grid = GridSearchCV(estimator=text_clf, param_grid=params, n_jobs=-1)
+ 	#grid.fit(data['Content'], data['Category'])
+ 	#print("Best score: %0.3f" % grid.best_score_)
+   	#print("Best parameters set:")
+   	#best_parameters = grid.best_estimator_.get_params()
+   	#for param_name in sorted(params.keys()):
+	#	print("\t%s: %r" % (param_name, best_parameters[param_name]))
+ 	
+ 	#SVM with the best hyperparameters
+ 	text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', svm.SVC(C=1.0, kernel='linear',gamma=0.001))])
 	#KfoldCrossValidation(text_clf, folds, data)
 
  	#Naive Bayes
@@ -175,8 +200,8 @@ def main():
  	#KfoldCrossValidation(text_clf, folds, data)
 
  	#Stochastic Gradient Descent
- 	#text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=2000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', SGDClassifier(loss='hinge', penalty='l2',alpha=1e-3, random_state=42,max_iter=5, tol=None))])
- 	#KfoldCrossValidation(text_clf, folds, data)
+ 	text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=2000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', SGDClassifier(loss='hinge', penalty='l2',alpha=1e-3, random_state=42,max_iter=5, tol=None))])
+ 	KfoldCrossValidation(text_clf, folds, data)
 
  	#Stochastic Gradient Descent
  	#text_clf = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=1000)), ('tfidf', TfidfTransformer()),('svd', svd_model),('clf', MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(10, 5), random_state=1))])
