@@ -41,12 +41,42 @@ def unseen_data_predict(text_clf, train_data, unseen_data):
 	file.close()
 
 def unseen_data_predict_combine_3classifiers(text_clf1, text_clf2, text_clf3, train_data, unseen_data):
+	category_map = []
+	category_map.append("Business")
+	category_map.append("Film")
+	category_map.append("Football")
+	category_map.append("Politics")
+	category_map.append("Technology")
+
 	text_clf1.fit(train_data['Content'], train_data['Category'])
 	predicted1 = text_clf1.predict(unseen_data['Content'])
+	y = text_clf1.predict_proba(unseen_data['Content'])
+	text_clf1.fit(train_data['Title'], train_data['Category'])
+	y1 = text_clf1.predict_proba(unseen_data['Title'])
+	for i in range(len(y)):
+		mm = max(y[i]+y1[i])
+		index = np.where((y[i]+y1[i]) == mm)
+		predicted1[i] = category_map[index[0][0]]
+
 	text_clf2.fit(train_data['Content'], train_data['Category'])
 	predicted2 = text_clf2.predict(unseen_data['Content'])
+	y = text_clf2.predict_proba(unseen_data['Content'])
+	text_clf2.fit(train_data['Title'], train_data['Category'])
+	y1 = text_clf2.predict_proba(unseen_data['Title'])
+	for i in range(len(y)):
+		mm = max(y[i]+y1[i])
+		index = np.where((y[i]+y1[i]) == mm)
+		predicted2[i] = category_map[index[0][0]]
+
 	text_clf3.fit(train_data['Content'], train_data['Category'])
 	predicted3 = text_clf3.predict(unseen_data['Content'])
+	y = text_clf3.predict_proba(unseen_data['Content'])
+	text_clf3.fit(train_data['Title'], train_data['Category'])
+	y1 = text_clf3.predict_proba(unseen_data['Title'])
+	for i in range(len(y)):
+		mm = max(y[i]+y1[i])
+		index = np.where((y[i]+y1[i]) == mm)
+		predicted3[i] = category_map[index[0][0]]
 	
 	for j in range(len(predicted1)):
 		hashmap = {}
@@ -95,15 +125,15 @@ def KfoldCrossValidation(text_clf, folds, data):
 
 		predicted = text_clf.predict(data['Content'][test_indices])
 
-		# y= text_clf.predict_proba(data['Content'][test_indices])
+		y= text_clf.predict_proba(data['Content'][test_indices])
 		
-		# text_clf.fit(data['Title'][train_indices], data['Category'][train_indices])
-		# y1= text_clf.predict_proba(data['Title'][test_indices])
+		text_clf.fit(data['Title'][train_indices], data['Category'][train_indices])
+		y1= text_clf.predict_proba(data['Title'][test_indices])
 		
-		# for i in range(len(y)):
-		# 	mm = max(y[i]+y1[i])
-		# 	index = np.where((y[i]+y1[i]) == mm)
-		# 	predicted[i] = category_map[index[0][0]]
+		for i in range(len(y)):
+			mm = max(y[i]+y1[i])
+			index = np.where((y[i]+y1[i]) == mm)
+			predicted[i] = category_map[index[0][0]]
 			
 		#print predicted
 		#use_title_for_prediction(predicted,data,test_indices)
@@ -114,7 +144,7 @@ def KfoldCrossValidation(text_clf, folds, data):
 		#fmeasure += metrics.f1_score(data['Category'][test_indices], predicted, average='macro')
 
 		print str(count) + "st fold completed"
-		print accuracy/count
+		print metrics.accuracy_score(data['Category'][test_indices], predicted)
 		count += 1
 
 	print "Precision = " + str(precision/10)
@@ -245,7 +275,7 @@ def main():
 	data = pd.read_csv('./datasets/train_set.csv', sep="\t")
 	unseen_data = pd.read_csv('./datasets/test_set.csv', sep="\t")
 	folds = 10
-	data = data[0:4090]
+	#data = data[0:4090]
 	#append_title_to_content(data,unseen_data,1)
 
 	svd_model = TruncatedSVD(n_components=500, algorithm='randomized',n_iter=10, random_state=42)
@@ -281,13 +311,13 @@ def main():
  	#accuracy=96.60% (n_components=650,max_features=5000)
  	#accuracy=96.62% (n_components=750,max_features=5000)
  	#accuracy=96.62% (n_components=1000,max_features=5000)
- 	text_clf1 = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=7000)),('tfidf', TfidfTransformer()),('svd', svd_model),('clf', svm.SVC(C=1.0, kernel='linear',gamma=0.001))])
+ 	text_clf1 = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=7000)),('tfidf', TfidfTransformer()),('svd', svd_model),('clf', svm.SVC(C=1.0, kernel='linear',gamma=0.001,probability=True))])
 	#KfoldCrossValidation(text_clf1, folds, data)
 	
 	#accuracy=95.17% (n_components=500,max_features=7000)
  	#Naive Bayes
  	text_clf4 = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=7000)),('tfidf', TfidfTransformer()),('clf', MultinomialNB())])
- 	#KfoldCrossValidation(text_clf, folds, data)
+ 	#KfoldCrossValidation(text_clf4, folds, data)
 
  	#Stochastic Gradient Descent---accuracy=96.38%(random hyperparameters)
  	text_clf2 = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=7000)),('tfidf', TfidfTransformer()),('svd', svd_model),('clf', SGDClassifier(loss='hinge', penalty='l2',alpha=1e-3, random_state=42,max_iter=5, tol=None, n_jobs=-1))])
@@ -295,12 +325,13 @@ def main():
 
  	#95.89%
  	#Neural Network Descent--accuracy=94.25%(10,20), accuracy=94.83%(20,20), accuracy=94.48%(20,30), accuracy=94.54%(10,30), accuracy=94.78%(30,30)
- 	text_clf3 = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=7000)),('tfidf', TfidfTransformer()),('svd', svd_model),('clf', MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(8, 10), random_state=1))])
- 	#KfoldCrossValidation(text_clf3, folds, data)
+ 	#accuracy with title: accuracy=96.2%(8,10), accuracy=96.3%(8,15)
+ 	text_clf3 = Pipeline([('vect', TfidfVectorizer(stop_words=ENGLISH_STOP_WORDS,max_features=7000)),('tfidf', TfidfTransformer()),('svd', svd_model),('clf', MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(8, 15), random_state=1))])
+ 	KfoldCrossValidation(text_clf3, folds, data)
 
 
  	#unseen_data_predict(text_clf, folds, data, unseen_data)
- 	unseen_data_predict_combine_3classifiers(text_clf1,text_clf2,text_clf4,data,unseen_data)
+ 	#unseen_data_predict_combine_3classifiers(text_clf1,text_clf3,text_clf4,data,unseen_data)
 
 if __name__ == "__main__":
 	main()
