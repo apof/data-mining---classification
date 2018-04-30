@@ -40,7 +40,7 @@ def main():
 	data = pd.read_csv('./datasets/train_set.csv', sep="\t")
 	unseen_data = pd.read_csv('./datasets/test_set.csv', sep="\t")
 	folds = 10
-	file = open("./EvaluationMetric_10fold.csv",'w')
+	file = open("../EvaluationMetric_10fold.csv",'w')
 	file.write("Statistic Measure"+","+"Naive Bayes"+","+"Random Forest"+","+"SVM"+","+"KNN"+","+"My Method"+"\n")
 
 	svd_model = TruncatedSVD(n_components=500, algorithm='randomized',n_iter=10, random_state=42)

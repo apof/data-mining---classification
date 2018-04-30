@@ -58,7 +58,7 @@ def unseen_data_predict_combine_3classifiers(text_clf1, text_clf2, text_clf3, tr
 				#print "changed!!!"
 			predicted1[j] = sorted_hashmap[0][0]
 
-	file = open("./testSet_categories.csv",'w')
+	file = open("../testSet_categories.csv",'w')
 	file.write("Id"+","+"Category"+"\n")
 	for i in range(len(predicted1)):
 		file.write(str(unseen_data['Id'][i]))
