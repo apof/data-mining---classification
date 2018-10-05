@@ -8,8 +8,7 @@ The dataset consists of a train_set with 12267 data points and a test_set of 306
 For the classification task, we implemented a KNN classifier and we also used SVM, Random Forest, Multinomial Naive Bayes and KNN classifiers from Scikit-learn library.
 
 For the validation of each model we used 10-fold Cross Validation by calculating the following metrics:
-
-1)Precision
-2)Recall
-3)F-Measure
-4)Accuracy
+1)Precision, 
+2)Recall, 
+3)F-Measure, 
+4)Accuracy, 
