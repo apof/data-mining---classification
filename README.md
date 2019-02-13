@@ -11,4 +11,6 @@ For the validation of each model we used 10-fold Cross Validation by calculating
 1)Precision, 
 2)Recall, 
 3)F-Measure, 
-4)Accuracy, 
+4)Accuracy,
+
+Authors: Apostolos Florakis(https://github.com/apof) - Dimitrios Tsesmelis (https://github.com/JimTsesm)
